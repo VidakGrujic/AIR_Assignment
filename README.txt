@@ -2,7 +2,7 @@
 
 Dataset folder struktura:
 
-Link: https://www.transfernow.net/dl/20250517SMIHedCm
+Link: https://www.transfernow.net/dl/202505193cXJZv9S
 
 datasets
 ├── final_correct_datasets
