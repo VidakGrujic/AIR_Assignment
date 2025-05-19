@@ -14,8 +14,6 @@ datasets
 │ ├── training
 │ │ └── parsed_data_final.json
 │ └── all_retrieved_articles.json
-└── other_datasets
-└── (not important for now)
 
 
 Update:
