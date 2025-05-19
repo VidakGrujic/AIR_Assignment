@@ -154,4 +154,3 @@ class DataManipulator:
         random.shuffle(final_articles)
 
         return final_articles
-
