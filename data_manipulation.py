@@ -76,8 +76,6 @@ class DataManipulator:
 
         return ground_truth_data
 
-
-
     def get_ground_truth_from_all_files(self, folder_path):
         '''
         This function READS ALL JSON FILES FROM `folder_path` and COMBINE ALL GROUND TRUTH DATA FROM THEM
@@ -101,4 +99,59 @@ class DataManipulator:
 
         return all_ground_truth_data
         
+    def get_questions_from_data(self, ground_truth_data):
+        """
+        This function extract all question text per file
+        Input: List of ground truth objects
+
+        Returns
+            - List of dictionaries where qid is key and question text is value
+        """
+        questions = []
+        for obj in ground_truth_data:
+            questions.append({'qid' : obj['qid'], 
+                              'question': obj['question']})
+
+
+        return questions
+    
+    def build_article_dataset_with_ground_truth(self, ground_truth_data, all_articles, total_articles_target):
+        """
+        Builds a flat list of article objects including:
+            - All ground truth articles from training/test
+            - Randomly sampled non-ground-truth articles to reach `total_articles_target`
         
+        Raises ValueError if ground truth articles alone exceed the target.
+
+        Returns:
+            - A flat list of article dicts with length == total_articles_target
+        """
+
+        article_lookup = {article['pid']: article for article in all_articles}
+
+        # Collect all unique ground truth PIDs
+        gt_pids = set()
+        for entry in ground_truth_data:
+            gt_pids.update(entry['ground_truth_documents_pid'])
+
+        # Convert to article objects (and skip if pid not found)
+        gt_articles = [article_lookup[pid] for pid in gt_pids if pid in article_lookup]
+
+        if len(gt_articles) > total_articles_target:
+            raise ValueError(f"Total ground truth articles ({len(gt_articles)}) exceed target size ({total_articles_target}).")
+
+        # Sample non-GT articles to fill the gap
+        needed_additional = total_articles_target - len(gt_articles)
+        non_gt_articles = [a for a in all_articles if a['pid'] not in gt_pids]
+
+        if needed_additional > len(non_gt_articles):
+            raise ValueError(f"Not enough non-ground-truth articles to reach total target ({total_articles_target}).")
+
+        sampled_non_gt = random.sample(non_gt_articles, k=needed_additional)
+
+        # Combine and shuffle
+        final_articles = gt_articles + sampled_non_gt
+        random.shuffle(final_articles)
+
+        return final_articles
+
