@@ -1,6 +1,7 @@
 import json
 import math 
 from tqdm import tqdm
+import re
 
 class Accuracy:
     def __init__(self):
@@ -72,24 +73,22 @@ class Accuracy:
 
 
 ######### Snippets Metrices #############
-    def get_offsets(self, snippet):
-            return set(
-                (snippet['document'], i)
-                for i in range(snippet['offsetInBeginSection'], snippet['offsetInEndSection'] + 1)
-            )
+    
+    def normalize_text(self, text):
+        text = text.lower().strip()
+        text = re.sub(r'\s+', ' ', text)  # Collapse multiple spaces
+        return text
 
-    def get_all_offsets(self, snippets):
-        result = set()
-        for snip in snippets:
-            result.update(self.get_offsets(snip))
-        return result
+    def get_snippet_texts(self, snippets):
+        return set(self.normalize_text(snip['text']) for snip in snippets)
+
 
     def compute_snippet_overlap_metrics(self, predicted_snippets, ground_truth_snippets):
         """
-        Computes P_snip, R_snip, F1_snip
+        Computes P_snip, R_snip, F1_snip using exact normalized snippet text match
         """
-        S = self.get_all_offsets(predicted_snippets)
-        G = self.get_all_offsets(ground_truth_snippets)
+        S = self.get_snippet_texts(predicted_snippets)
+        G = self.get_snippet_texts(ground_truth_snippets)
 
         if not S or not G:
             return 0.0, 0.0, 0.0
@@ -103,24 +102,26 @@ class Accuracy:
 
     def compute_snippet_average_precision(self, predicted_snippets, ground_truth_snippets):
         """
-        Computes Average Precision (AP) for snippets using character-overlap-based relevance
+        Computes Average Precision (AP) for snippets using exact text match
         """
-        G = self.get_all_offsets(ground_truth_snippets)
+        G = self.get_snippet_texts(ground_truth_snippets)
         if not G:
             return 0.0
 
         hits = 0
         score = 0.0
-        seen_offsets = set()
+        seen = set()
 
         for i, snip in enumerate(predicted_snippets):
-            current = self.get_offsets(snip)
-            if current & G:
+            snip_text = self.normalize_text(snip['text'])
+            if snip_text in G and snip_text not in seen:
                 hits += 1
                 score += hits / (i + 1)
-            seen_offsets.update(current)
+                seen.add(snip_text)
 
         return score / min(len(G), 10) if hits > 0 else 0.0
+
+
 
     def compute_snippet_gmap(self, average_precisions, epsilon=1e-6):
         """
